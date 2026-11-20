@@ -89,16 +89,16 @@ export default class Favorites extends View {
         .child(div().font_semibold().child("Favorites"))
         .child(div().px(5).py(1).rounded(4).border_1().border_color(t.border).text_size(10).text_color(t.muted).child(`${list.length}`))
         .child(div().flex_1())
-        .child(h_flex().id("fav-add").h(24).px(8).flex_none().gap(4).items_center().rounded(6).cursor_pointer().text_size(11.5).text_color(t.muted)
+        .child(h_flex().id("fav-add").size(24).flex_none().items_center().justify_center().rounded(6).cursor_pointer().text_color(t.muted)
+          .tooltip("Favorite current folder")
           .hover((s) => s.bg(t.hover).text_color(t.foreground))
           .on_click(() => this.keep(current()))
-          .child(svg(ICON("star")).size(11).flex_none())
-          .child(div().child("收藏当前目录"))))
+          .child(svg(ICON("star")).size(13).flex_none())))
       .child(v_flex().id("fav-list").flex_1().min_h(0).p(6).gap(2).overflow_y_scroll().children(rows)
         .when(!rows.length, (el) => el.child(div().p(8).text_size(12).text_color(t.dim).child("还没有收藏"))))
       .child(h_flex().id("fav-browse").h(30).flex_none().mx(6).mb(6).px(8).gap(7).items_center().rounded(7).cursor_pointer().text_size(12).hover((s) => s.bg(t.hover))
         .on_click(() => this.browse())
         .child(svg(ICON("plus")).size(13).flex_none().text_color(t.muted))
-        .child(div().flex_1().min_w(0).text_color(t.muted).child("浏览文件夹…")));
+        .child(div().flex_1().min_w(0).text_color(t.muted).child("Browse folders…")));
   }
 }

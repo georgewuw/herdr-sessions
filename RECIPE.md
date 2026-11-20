@@ -1,109 +1,115 @@
 # Herdr Sessions
 
-A working layout for people who drive coding agents. Core features:
-
-- Spaces & tabs on the left, terminal in the middle, one right-hand panel for **Sessions** and
-  **Favorites** — collapsed by default, opened from the tab bar
-- Resume any coding-agent session (pi / Claude Code) in one click, right in its original folder
-- Tag sessions, filter with `#tag`, pin favorite folders for one-click switching
-
-Everything follows the person's theme tokens, so it looks native in light and dark.
+A Herdr layout for people who drive coding agents all day. Spaces and tabs sit on the left, the
+terminal in the middle, and one right-hand panel holds **Sessions** and **Favorites** (next to Herdr's own
+Files and Changes). The panel is collapsed until the person opens it from the tab bar. Resuming a pi or
+Claude Code session takes one click and lands in the folder it was recorded in.
 
 ![Herdr Sessions](preview.png)
 
-**What you see:** top to bottom, left to right — a 268px sidebar (46px chrome bar with the window
-lights and drag area, then spaces and agents stacked at `weight 1` / `min 90` each, then a 69px
-footer), a 42px tab bar, then a row with the terminal and a 368px right panel (`min 280`,
-`max 900`, `hidden: true`), and a 28px status bar. Padding 8, gap 8 around the terminal, pane radius
-10, 1px `border` with a 1px `accent` focus ring, `terminal_padding` `[14, 12]`, traffic lights at
-`[12, 16]`, `titlebar: "none"`. Type is the theme's own; sizes below.
+## What you see
 
-**How it behaves:** each of the two panel buttons toggles its block inside the `panel-body` stack
-(`layout.show`/`layout.hide` + `layout.select`) and the panel itself is hidden or shown; clicking the
-button of the panel already open collapses the whole panel. Space tabs show their agent's status —
-`working` gets a spinning `mods/workspace-chrome/spinner.svg`, a blocked or done agent gets its
-program icon or tint. Hovering a tab reveals its ✕. In Sessions,
-hovering a row tints it, `+` turns the third line into a tag input, and the search box filters live
-as you type. Nothing moves unless the person acts, except the working spinner and the 30s session
-rescan.
+Herdr's default window, unchanged: space and agent lists on the left, the terminal in the middle, a tab bar
+on top, a status bar below. Colours and type are the theme's. The differences:
+
+- The tab bar has two more panel buttons, *Sessions* and *Favorites*, after Herdr's *Files* and *Changes*.
+- The right panel is hidden at first and holds four panels, one at a time; *Sessions* is the one it opens on.
+  - *Sessions*: a header with the title and a count, a search box with a list/tree toggle button, then
+    rows. A row is the agent icon, the title, a `+`; below it the age and folder; below that its tags.
+  - *Favorites*: a header with the title, a count and a star button; one two-line row per folder (name,
+    then `Local · ~/path`) with an "Opened" badge and a ✕; a "Browse folders…" row at the bottom.
+
+## How it behaves
+
+- **Agent status** in the tab bar, as Herdr's own tab bar shows it: `working` a spinner, `blocked` and `done`
+  a dot, `idle` nothing.
+- **Panel buttons** open their panel and mark themselves selected; clicking the open panel's button collapses
+  the panel. Each space remembers which panel it had open.
+- **Sessions** lists the current project only (the space's folder, or the focused terminal's folder once
+  it has left it). Clicking a row opens a tab named after the session title and resumes it in its folder.
+  Hovering tints a row; `+` turns the tag line into an input. `#tag` filters by tag only, several tags must
+  all match, `#tag word` is both. The toggle switches a flat list and a tree grouped by agent (collapsible,
+  a count beside each group's name); the choice is remembered.
+- **Favorites**: the star saves the active space's folder; a row selects the space already on that folder
+  (its own folder, or one of its terminals sitting there) or makes a new space; ✕ forgets it.
+- Nothing moves unless the person acts, apart from the working spinner and a session rescan every 30s.
 
 ## Built from
 
-`layouts/sessions.json` — a `row` of `sidebar` (268px, `background: chrome`, `resizable: false`,
-`min 44`, `max 480`) and `work` (column). Sidebar children: block `brand` → mod `workspace-chrome`
-(46px, `window_drag: true`); column `sidebar-lists` → blocks `spaces` → shipped mod `spaces` and `agents`
-→ shipped mod `agents` (both `weight 1`, `min 90`); block `sidebar-footer` → `workspace-chrome` with
-`props: { footer: true }` (69px). Work children: block `tabs` → mod `hs-tabs` (42px,
-`window_drag: true`); row `work-body` (padding 8, gap 8) → block `main` (`tab: "active"`, a `pane`
-whose header is `pane` at `height 30`, `reveal: "always"`, `position: "top"`, `lone: true`) and
-column `panel` (368px) → stack `panel-body` (`active: "sessions"`) with blocks
-`sessions` → `hs-sessions`, `favorites` → `hs-favorites`; then block
-`status` → `workspace-status` (28px). Root: `background: "canvas"`, `divider` 1px `border`,
-`titlebar: "none"`.
+`layouts/sessions.json` is a copy of Herdr's own `layouts/main.json` with **three changes**. Everything
+else (sizes, colours, the sidebar, the terminal pane, the status bar) is whatever `main.json` has, so start
+from the current `main.json` and make only these:
 
-Four mods, all `"place": "none"` (a block, never an overlay), `// @ts-nocheck` on line 1 since they
-are plain JS:
+1. The `tabs` block shows mod `hs-tabs` instead of `tabs`.
+2. The `panel-body` stack gets two more children, after `files` and `changes`: a block `sessions` →
+   mod `hs-sessions` and a block `favorites` → mod `hs-favorites`.
+3. `panel-body` is `active: "sessions"` instead of `"files"`.
 
-- **hs-tabs** (`mods/hs-tabs/main.js`) — the tab bar. Space tabs from `spaces()`/`panes()`/`run`, a
-  `ScrollHandle` for overflow, window buttons via `run("window.minimize"…)`. Two `panelButton`
-  helpers call `run("layout.select", { stack: "panel-body", child: <id> })`, read whether that child
-  is the stack's `active`, and `layout.hide`/`layout.show` the `panel` node. Panel buttons are gated
-  on `enabled`, which is just `["sessions", "favorites"]`.
-  Renaming a tab opens `new-menu` through `openOverlay`.
-- **hs-sessions** (`mods/hs-sessions/main.js`, `scan.py`, `paths.js`) — `main.js` runs `scan.py <home()>` (Python from
-  `python3`, `python` or `py -3`, whichever answers) every 30s. The script reads `$PI_CODING_AGENT_DIR` or
-  `~/.pi/agent`, and `$CLAUDE_CONFIG_DIR` or `~/.claude`: `sessions/*/*.jsonl` (and one level deeper) and
-  `projects/*/*.jsonl`. A failed scan keeps the previous list and shows the error. The session's folder
-  is the `cwd` recorded inside the file, never decoded from the flattened folder name. For pi
-  it takes `id` and `cwd` from the file's first line and the title from the **last**
-  `{"type":"session_info","name":…}` entry, falling back to the first user message. Clicking a row
-  runs `run("terminal.open", { argv, folder, place: "tab" })` with `pi --session <header id>`,
-  `claude --resume <file uuid>`; on Windows the argv is prefixed with `cmd /c` (npm launchers can't be
-  spawned directly). Remote spaces list nothing: records are read on this computer. Tags live in `shared("hs.sessions.tags")` keyed
-  `pi:<file name>`, edited through an `InputState` per session, cached by key so re-renders never
-  rebuild the input. `home()`, `theme()`, `notify()` throughout.
-- **hs-favorites** (`mods/hs-favorites/main.js`) — flat list from `shared("hs.favorites")`, entries
-  `{ name, folder, machine }`. A click runs `run("space.select")` when a `spaces()` entry matches on
-  folder+machine, else `run("space.new", { folder, machine })`. `收藏当前目录` uses the active space's
-  own `folder` (falling back to the focused pane's cwd only when the space has none — falling back
-  always made switching spaces look like a no-op). `浏览文件夹收藏…` uses `pickFolder`. Art, all in the
-  mod's own folder: `folder.svg`, `star.svg`, `plus.svg`.
-- **paths.js** — one copy in each of hs-sessions and hs-favorites (a mod can only import from
-  its own folder; `install.sh` refuses to run if the copies differ). Every folder comparison goes
-  through it: `pathKey` (forward slashes, no trailing slash, lowercase on Windows and macOS), `isInside`,
-  `samePath`, `baseName`, `tildify`. Folders are stored and launched in the spelling the OS gave.
+Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
 
-Shipped mods it relies on: `workspace-chrome` (spinner, icons), `workspace-status`, `agents`, `pane`
-(close icon), `menu`, `new-menu`. The mods carry their own copies of everything else, including the
-Windows window-button icons in `hs-tabs`. Layout ids the mods look up by name: `sidebar`, `panel`,
-`panel-body`, and the stack children `sessions` and `favorites`; renaming one in `sessions.json` breaks them.
+- **hs-tabs** — a copy of Herdr's own `tabs` mod with `"sessions"` and `"favorites"` appended to its
+  `enabled` list and two more `panelButton`s after Changes; everything else stays as shipped (including
+  reading the window-button icons from `mods/tabs/`). A button runs `layout.select { stack: "panel-body",
+  child }` and `layout.show` / `layout.hide` on `panel`. Files and Changes still follow `workspace.panels`.
+- **hs-sessions** — `main.js` runs `scan.py <home()>` every 30s through `exec` (the first of `python3`,
+  `python`, `py -3` that prints `1`; a failed scan keeps the old list and shows the error) and filters,
+  tags and launches.
+  - pi records: `$PI_CODING_AGENT_DIR` or `~/.pi/agent`, `sessions/*/*.jsonl` and one level deeper, not
+    `subagent-artifacts`. `id` and `cwd` from the first line; title from the **last** `session_info` name,
+    else the first user message.
+  - Claude Code records: `$CLAUDE_CONFIG_DIR` or `~/.claude`, `projects/*/*.jsonl`, not `agent-*`;
+    the id is the file's uuid.
+  - A folder is the `cwd` recorded in the file, never decoded from the flattened folder name.
+  - Resume: `tab.new { name, argv, folder }` with `pi --session <id>` or `claude --resume <id>`, prefixed by
+    `cmd /c` on Windows. The name is the title's first 24 characters (else `pi` / `claude`); left unnamed the
+    launcher would call the tab `cmd`. `claude --version` is probed once per scan.
+  - Icons are Herdr's `icons/pi.svg` (one colour: `svg()` in `t.muted`) and `icons/claude.svg` (own colour:
+    `image()`), nudged down 2px.
+  - State in `shared`: tags at `hs.sessions.tags` keyed `pi:<file name>`; the view at `hs.sessions.view` as
+    `{ tree, folded }`. One `InputState` per tagging row, cached by key so re-renders never rebuild it.
+  - Art: `sessions.svg`, `list.svg`, `tree.svg`, `chevron-down.svg`, `chevron-right.svg`.
+- **hs-favorites** — a flat list from `shared("hs.favorites")`, entries `{ name, folder, machine }`.
+  `spaceAt(fav)` finds the space on a favorite and drives both the click (`space.select`, else `space.new
+  { folder, machine }`) and the badge. The star uses the space's own `folder`, the focused pane's cwd
+  only if the space has none (always using it made switching spaces look like a no-op). The bottom row
+  calls `pickFolder()` with no prompt. Art: `folder.svg`, `star.svg`, `plus.svg`.
+- **paths.js** — one copy in each of hs-sessions and hs-favorites (a mod can only import from its own
+  folder; `install.sh` refuses to run if they differ). Every folder comparison goes through it: `pathKey`
+  (forward slashes, no trailing slash, lowercase on Windows and macOS), `isInside`, `samePath`, `baseName`,
+  `tildify`. Folders are stored and launched as the OS spelled them.
+
+`herdr` functions used: `spaces`, `panes`, `focused`, `layout`, `theme`, `window`, `shared` / `setShared`,
+`run`, `exec`, `home`, `appHome`, `notify`, `pickFolder`, `checking`. Beyond the layout it relies on Herdr's own
+`tabs`, `files` and `changes` mods and its `icons/`. Programs run: Python, `pi`, `claude`.
 
 ## Watch out
 
-- `cloned_from` was stripped from the layout and every `mod.json`: left in, Herdr offers to update
-  the mod from its upstream, which would overwrite these changes.
-- The panel is `hidden: true` at first. People who do not find the two buttons think the layout is
-  broken — the README says it twice.
-- Mods render again by themselves when spaces, focus or terminals change, so none polls them. The only
-  timer is hs-sessions' 30s rescan.
-- Editing a mod's file does not reload the copy already on screen. Switch to another panel and back
-  (`layout.select --stack panel-body --child sessions`, then back), or another layout and back.
-  Selecting the same child twice is a no-op.
-- `shared.json` on disk is a snapshot of the app's memory; editing it changes nothing until a
-  restart. Only `setShared` moves live state.
-- Python, `git`, `pi` and `claude` are called. Missing ones must degrade to a message or a
-  toast, never to a broken panel. Nothing runs during `herdr-app check` (`checking()` guards `init`).
-- The copy inside the mods is Chinese. There is no i18n layer, so an English UI means editing
-  strings (README lists which file holds which).
-- Sizes are pixels at the person's font size; `max_w`/`truncate` everywhere a path can be long.
+- `cloned_from` is stripped from the layout and every `mod.json`. Left in, Herdr offers to update the mod
+  from upstream and overwrites these changes.
+- The panel starts hidden. People who miss the tab-bar buttons think the layout is broken.
+- `hs-tabs` finds the layout nodes `sidebar`, `panel` and `panel-body` by id, and the panel buttons by the stack
+  children `sessions` and `favorites`; keep those ids, they are the default's.
+- When Herdr changes `main.json` or its `tabs` mod, re-apply the three layout changes and the `hs-tabs`
+  additions to the new versions rather than editing this file; none of those details are repeated here.
+- Editing a mod's file does not reload the copy on screen. Select another panel and back
+  (`layout.select --stack panel-body --child sessions`), or switch layouts and back.
+- `shared.json` on disk is a snapshot; editing it changes nothing until a restart. Only `setShared`
+  moves live state.
+- Session records are read on this computer, so a remote space lists nothing.
+- A missing Python, `pi` or `claude` must end in a message or toast, never a broken panel. Nothing runs
+  during `herdr-app check` (`checking()` guards `init`).
+- The copy is hard-coded and mixes Chinese with English; there is no i18n layer (the README lists the
+  strings). Paths can be long: `max_w` and `truncate` throughout.
 
 ## Done when
 
-- `herdr-app check` passes for all four mods and `herdr-app do layout.switch --name sessions` shows
-  the layout with no entry in `herdr-app status`'s `errors`.
-- Each of the two panel buttons opens its own panel and collapses on a second click.
-- In Sessions, only the current space's project is listed; `#tag` narrows to tagged rows; `+` opens
-  a tag input that saves without losing focus; clicking a row resumes that session in its folder.
-- In Favorites, `收藏当前目录` saves the current space's project folder (not the focused terminal's),
-  and clicking an entry switches to that space instead of making a duplicate.
-- `uninstall.sh` removes `layouts/sessions.json` and the four mods and restores any install backup.
+- `herdr-app check` passes for the three mods, and `herdr-app do layout.switch --name sessions` shows the
+  layout with nothing in `herdr-app status`'s `errors`.
+- Each panel button opens its panel and collapses it on a second click, and a space reopens the panel it
+  last had.
+- Sessions lists only the current project; `#tag` narrows to tagged rows; a row opens a tab named after the
+  session and resumes it in its folder.
+- The list/tree toggle works, and the choice survives a restart.
+- Favorites saves the space's project folder; a click switches to the space already on that folder, also
+  when an agent runs there from a space whose own folder differs, instead of making a duplicate.
+- `uninstall.sh` removes the layout and the three mods and restores any install backup.

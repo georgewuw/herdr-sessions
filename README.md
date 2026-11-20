@@ -8,34 +8,23 @@ A [Herdr](https://herdr.dev) layout for people who drive coding agents all day.
 
 ![Herdr Sessions](preview.png)
 
-一个给 [Herdr](https://herdr.dev) 用的布局，给整天开着编程 agent 干活的人：
-
-- 左边空间和标签，中间终端，右边一个面板装 **会话 / 收藏** 两件事
-- 会话一条一点就恢复（pi / Claude Code 都收），就在它原来的目录里
-- 会话可以打标签，搜 `#标签` 一秒过滤；常用目录加收藏，一点就切过去
-
 ---
 
-## 中文
+### 简介
 
-### 这是什么
-
-| 区域 | 里面是什么 |
-| --- | --- |
-| 左侧栏 268px | 空间列表（可改颜色、重命名、新建）、Agent 列表、底部状态 |
-| 顶部 42px | 打开的标签、两个面板开关、窗口按钮 |
-| 中间 | 终端。标题栏和窗口按钮的位置都留好了，窄的时候也不会挤掉 |
-| 右侧面板 368px | 两个面板叠在一起，点顶栏按钮切换；**默认收起** |
-| 底部 28px | 状态栏 |
+一个给 [Herdr](https://herdr.dev) 用的布局，给整天开着编程 agent 干活的人：
 
 右侧两个面板：
 
-- **Sessions** — 会话记录。**只列当前 space 所在项目的会话**，pi / Claude Code 两种都收，
-  点一条就在它原来的目录里恢复那个会话。每条两行再加一行标签：标题、时间和路径、标签。
-  搜索框里写 `#标签` 就只按标签过滤，`#数据 #对账` 要求两个标签都有，`#数据 跑` 是标签加关键词。
+- **Sessions** — 会话记录。**只列当前 Space 所在项目的会话**，pi / Claude Code 两种都收，
+  点一条就在它原来的目录里恢复那个会话，新开的 tab 以会话标题命名。焦点终端离开 Space 目录时，
+  列表改跟随它所在的目录。每条两行再加一行标签：标题、时间和路径、标签，行首是 Pi / Claude Code 的图标。
+  搜索栏右侧的按钮在列表和树状视图间切换；树状视图按 PI / Claude Code 分组、组名旁显示数量，视图和折叠状态会记住。
+  搜索框里写 `#标签` 就只按标签过滤。
   行右侧的 `+` 加标签（逗号分隔），保存后显示成标签块，点标签块上的 ✕ 删掉。
-- **Favorites** — 收藏的目录，一条一行，点一下切到那个目录（已经开着就直接切过去，没开就新建一个 space）。
-  顶部「收藏当前目录」存的是当前 space 的项目目录，「浏览文件夹收藏…」可以挑任意文件夹。
+- **Favorites** — 收藏的目录，一条一行，点一下切到那个目录（已经开着就直接切过去，没开就新建一个 Space；
+  Space 的目录是它，或其中某个终端正停在它里面，都算开着）。
+  顶部的星标按钮存的是当前 Space 的项目目录，底部「浏览文件夹…」可以挑任意文件夹。
 
 ### 安装
 
@@ -64,12 +53,11 @@ bash /tmp/herdr-sessions/install.sh
 
 ### 关于语言
 
-界面文案是**中文写死的，布局本身无法中英切换**。要英文界面，只能自己改字符串，
-主要在这几个文件里（都在 `mods/*/main.js`）：
+界面文案**写死了，不会随系统语言切换**，中英文混用。要统一成某种语言，只能自己改字符串，主要在这几个文件里（都在 `mods/*/main.js`）：
 
-- `mods/hs-tabs/main.js` — 顶栏两个按钮的 `Sessions` / `Favorites`
-- `mods/hs-sessions/main.js` — `Sessions`、`搜索标题/路径， #标签 只按标签过滤`、`标签，逗号分隔`、`保存`
-- `mods/hs-favorites/main.js` — `Favorites`、`收藏当前目录`、`浏览文件夹收藏…`、`还没有收藏`
+- `mods/hs-tabs/main.js` — 顶栏按钮的 `Sessions` / `Favorites`
+- `mods/hs-sessions/main.js` — 标题 `Sessions`、搜索框占位符 `搜索标题/路径，或按 #标签 过滤`、标签输入框占位符 `标签，逗号分隔`、`保存`按钮、视图切换的悬浮提示、`Untitled`、相对时间（`刚刚` / `分钟前`…）、空列表提示、错误与通知文案
+- `mods/hs-favorites/main.js` — 标题 `Favorites`、星标按钮的悬浮提示、`Browse folders…`、空列表提示、收藏相关的通知文案
 
 改完存盘，切走再切回这个布局就会加载新文案（`herdr-app do layout.switch --name main` 再切回来）。
 
@@ -81,79 +69,6 @@ bash uninstall.sh
 
 只删 `layouts/sessions.json` 和你装进来的 3 个 mod（带 `.herdr-sessions` 标记的才删，你自己放的同名目录不动），
 安装时备份过的原文件会还原。
-你收藏的目录和标签留在 `shared.json` 的 `hs.favorites`、`hs.sessions.tags` 里，想清就自己删。
+你收藏的目录、标签和视图设置留在 `shared.json` 的 `hs.favorites`、`hs.sessions.tags`、`hs.sessions.view` 里，想清就自己删。
 
 ---
-
-## English
-
-### What it is
-
-A layout for [Herdr](https://herdr.dev).
-
-| Area | What's in it |
-| --- | --- |
-| Left sidebar, 268px | Spaces (rename, colour, new), agent list, status at the bottom |
-| Top bar, 42px | Your tabs, the two panel buttons, the window buttons |
-| Middle | The terminal. Title bar and window buttons have their spots reserved; nothing gets squeezed when narrow |
-| Right panel, 368px | Two panels stacked, switch from the top bar; **collapsed by default** |
-| Bottom, 28px | Status bar |
-
-The two right-hand panels:
-
-- **Sessions** — session history. It lists **only the sessions of the current space's project**,
-  from pi and Claude Code, and clicking one resumes it in the folder it was recorded in.
-  Each row is title / time and path / tags. In the search box, `#tag` filters by tag only,
-  `#data #recon` requires both, `#data run` is a tag plus keywords. `+` on a row adds tags
-  (comma separated); click ✕ on a tag to drop it.
-- **Favorites** — saved folders, one per line. Click to switch to that folder: it selects the
-  space already open there, or makes a new one. `收藏当前目录` saves the current space's project
-  folder, `浏览文件夹收藏…` lets you pick any folder.
-
-### Install
-
-```bash
-git clone https://github.com/<you>/herdr-sessions.git /tmp/herdr-sessions
-bash /tmp/herdr-sessions/install.sh
-```
-
-The script backs up anything it would replace, copies `layouts/sessions.json` and the three mods into
-`~/.config/herdr-app`, runs `herdr-app check` on each, and switches to the layout.
-
-Or by hand: copy `layouts/sessions.json` to `~/.config/herdr-app/layouts/`, copy the three
-`mods/hs-*` folders to `~/.config/herdr-app/mods/`, then
-`herdr-app do layout.switch --name sessions`.
-
-### Requirements
-
-A missing program only disables its own feature.
-Python 3 (`python3`, `python` or `py -3`) scans sessions (without it the panel says so), `pi` provides session titles, and `claude`
-is needed to resume Claude Code sessions.
-
-### Language
-
-**The interface copy is written in Chinese and the layout cannot switch languages.** For an English
-UI you have to edit the strings yourself, mainly in `mods/*/main.js`: the two button labels in
-`mods/hs-tabs/main.js`, the header, search placeholder and tag prompt in `mods/hs-sessions/main.js`,
-and the labels in `mods/hs-favorites/main.js`.
-Save, then switch away from the layout and back (`layout.switch --name main`, then back) to reload.
-
-### Uninstall
-
-```bash
-bash uninstall.sh
-```
-
-It removes `layouts/sessions.json` and the three mods, restoring install-time backups if there were any.
-Saved folders and tags stay in `shared.json` under `hs.favorites` and `hs.sessions.tags`.
-
----
-
-## 发布到 herdr.dev / Publishing
-
-推到 GitHub 后给仓库加 topic **`herdr-layout`**，一小时内会出现在
-[herdr.dev/layouts](https://herdr.dev/layouts)。Add the topic `herdr-layout` to the repository and
-it shows up there within the hour. `RECIPE.md` is the brief another agent builds this from.
-
-## 友情链接
-[LINUX DO](https://linux.do/) —— 真诚分享、友好讨论的技术社区，本项目的交流与反馈也发布于此

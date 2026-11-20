@@ -9,7 +9,7 @@ the same on every OS and check `window().platform` where they differ.
 | Python | first of `python3`, `python`, `py -3` that prints `1` (the Microsoft Store `python3` stub does not) | same |
 | Starting `pi` / `claude` | through `cmd /c` (npm launchers are shims and `.cmd` files that can't be spawned directly) | directly |
 | Folders | compared case-insensitively with `\` and `/` treated alike | case-insensitive on macOS, exact on Linux |
-| Window buttons | drawn by `hs-tabs` (own icons in `mods/hs-tabs/win-*.svg`) | macOS: system buttons, tabs padded past them |
+| Window buttons | drawn by `hs-tabs` (icons from Herdr's own `mods/tabs/win-*.svg`) | macOS: system buttons, tabs padded past them |
 
 Folder comparison lives in one place, `mods/*/paths.js`; the scan of pi and Claude Code records is
 `mods/hs-sessions/scan.py`. Both honour `PI_CODING_AGENT_DIR` and `CLAUDE_CONFIG_DIR` where relevant.

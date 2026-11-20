@@ -49,6 +49,7 @@ const PYTHONS = [["python3"], ["python"], ["py", "-3"]];
 function activeSpace() {
   return spaces().find((s) => s.active) ?? null;
 }
+
 function projectRoot(space) {
   const f = focused();
   const mine = f && (!space || f.space === space.id);
@@ -75,7 +76,7 @@ export default class Sessions extends View {
     this.python = undefined; // argv prefix of a working Python, null: none found
     this.claude = false;
     this.tagOnly = null; this.filter = ""; this.tagging = null;
-    this.input = InputState.new({ placeholder: "搜索标题/路径， #标签 只按标签过滤" });
+    this.input = InputState.new({ placeholder: "搜索标题/路径，或按 #标签 过滤" });
     this.input.on("change", (_e, cx) => { this.filter = this.input.value(); cx.notify(); });
     if (checking()) return;
     // The scan is independent of the shown space (render filters it), so it
@@ -167,8 +168,11 @@ export default class Sessions extends View {
   // Opens the session in the folder it was recorded in (in the agent's own
   // spelling of it); the agent's CLI must be on the PATH.
   resume(session) {
-    if (session.agent === CC && !this.claude) { notify({ title: "claude 未安装", body: "找不到 claude 命令，无法 resume 这个会话", level: "warning" }); return; }
-    if (!session.cwd) { notify({ title: "会话没有记录目录", level: "warning" }); return; }
+    if (session.agent === CC && !this.claude) { 
+      notify({ title: "Claude 未安装", body: "The claude command cannot be found, and the session cannot be resumed", level: "warning" }); 
+      return; 
+    }
+    if (!session.cwd) { notify({ title: "未找到该会话的对应目录", level: "warning" }); return; }
     const flag = session.agent === PI ? "--session" : "--resume";
     // A tab named after the session: left to itself it would take the launcher's
     // name (`cmd` on Windows).
@@ -223,8 +227,8 @@ export default class Sessions extends View {
       .when(!tagging, (el) => el.cursor_pointer().hover((s) => s.bg(t.hover)).on_click(() => this.resume(session)))
       .when(tagging, (el) => el.bg(t.selected))
       .child(h_flex().w_full().min_w(0).gap(7).items_center()
-        .child(this.agentIcon(agent, t).id(`agent-${i}`))
-        .child(div().flex_1().min_w(0).truncate().text_size(12.5).text_color(t.foreground).child(session.title || "(无标题)"))
+        .child(this.agentIcon(agent, t).id(`agent-${i}`).relative().top(2))
+        .child(div().flex_1().min_w(0).truncate().text_size(12.5).text_color(t.foreground).child(session.title || "Untitled"))
         .when(!tagging, (el) => el.child(div().id(`tag-add-${i}`).size(15).flex_none().flex().items_center().justify_center().rounded(4).text_size(11).text_color(t.dim)
           .hover((s) => s.text_color(t.accent).bg(t.raised))
           .on_click((_e, cx) => { cx.stop_propagation(); this.startTag(session, cx); })
@@ -232,7 +236,7 @@ export default class Sessions extends View {
       .child(h_flex().w_full().min_w(0).pl(29).gap(6).items_center()
         .child(div().flex_none().text_size(10.5).text_color(t.dim).child(when(session.mtime)))
         .child(div().flex_none().text_size(10.5).text_color(t.dim).child("·"))
-        .child(div().flex_1().min_w(0).truncate().text_size(10.5).child(tildify(session.cwd) || "未记录目录")))
+        .child(div().flex_1().min_w(0).truncate().text_size(10.5).child(tildify(session.cwd) || "The directory has not been recorded")))
       .when(tagging, (el) => el.child(h_flex().w_full().min_w(0).pl(29).gap(4).items_center()
         .child(Input.new(this.tagInputFor(this.keyOf(session))).flex_1().min_w(0).h(22).text_size(11).text_color(t.foreground))
         .child(div().id("tag-save").h(22).px(6).flex_none().flex().items_center().rounded(5).bg(t.raised).cursor_pointer().text_size(10.5).text_color(t.accent)
@@ -283,9 +287,9 @@ export default class Sessions extends View {
   emptyText(root, remote) {
     if (this.error) return this.error;
     if (!this.loaded) return "Loading sessions…";
-    if (remote) return "这个 space 在其他机器上：会话列表只读本机记录";
-    if (!root) return "当前 space 没有目录";
-    if (this.filter.trim().startsWith("#")) return "没有匹配这个标签的会话（先用行右侧 + 给会话加标签）";
+    if (remote) return "当前 Session 列表暂时无法读取到远程设备中的会话";
+    if (!root) return "当前 Space 没有目录";
+    if (this.filter.trim().startsWith("#")) return "暂无匹配结果";
     return "当前项目没有会话";
   }
 
@@ -317,7 +321,8 @@ export default class Sessions extends View {
           .child(svg(ICON(tree ? "list" : "tree")).size(14).flex_none().text_color(t.muted))))
       .when(Boolean(this.error && list.length), (el) => el.child(div().px(14).py(4).flex_none().text_size(10.5).text_color(t.blocked).truncate().child(this.error)))
       .child(v_flex().id("session-list").flex_1().min_h(0).p(6).gap(2).overflow_y_scroll()
-        .children(rows))
-      .when(!list.length, (el) => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.emptyText(root, remote))));
+        .children(rows)
+        // Inside the list: as its sibling it was pushed below the flex_1 list, to the very bottom.
+        .when(!list.length, (el) => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.emptyText(root, remote)))));
   }
 }
