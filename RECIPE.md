@@ -4,7 +4,7 @@ A working layout for people who drive coding agents. Core features:
 
 - Spaces & tabs on the left, terminal in the middle, one right-hand panel for **Files**, **Changes**,
   **Sessions** and **Favorites** — collapsed by default, opened from the tab bar
-- Resume any coding-agent session (pi / Claude Code / opencode) in one click, right in its original folder
+- Resume any coding-agent session (pi / Claude Code) in one click, right in its original folder
 - Review git diffs and commit without leaving the terminal — an **AI** button writes the commit message for you
 - Tag sessions, filter with `#tag`, pin favorite folders for one-click switching
 
@@ -65,11 +65,11 @@ are plain JS:
   `Commit` runs `git commit`, and the **AI** button builds a prompt from `git log --oneline -5` plus
   6000 characters of diff and runs `exec("pi", ["-p", prompt], { cwd })` to fill the box.
 - **hs-sessions** (`mods/hs-sessions/main.js`) — one `python3 -c` pass over `~/.pi/agent/sessions/*/*.jsonl`
-  and `~/.claude/projects/*/*.jsonl` plus `sqlite3` on `~/.local/share/opencode/opencode.db`. For pi
+  and `~/.claude/projects/*/*.jsonl`. For pi
   it takes `id` and `cwd` from the file's first line and the title from the **last**
   `{"type":"session_info","name":…}` entry, falling back to the first user message. Clicking a row
   runs `run("terminal.open", { argv, folder, place: "tab" })` with `pi --session <header id>`,
-  `claude --resume <file uuid>` or `opencode`. Tags live in `shared("hs.sessions.tags")` keyed
+  `claude --resume <file uuid>`. Tags live in `shared("hs.sessions.tags")` keyed
   `pi:<file name>`, edited through an `InputState` per session, cached by key so re-renders never
   rebuild the input. `home()`, `theme()`, `notify()` throughout.
 - **hs-favorites** (`mods/hs-favorites/main.js`) — flat list from `shared("hs.favorites")`, entries
@@ -97,7 +97,7 @@ out of `mods/hs-files/` and `mods/hs-spaces/`, so those two must be installed wi
   Selecting the same child twice is a no-op.
 - `shared.json` on disk is a snapshot of the app's memory; editing it changes nothing until a
   restart. Only `setShared` moves live state.
-- `python3`, `sqlite3`, `git` and `pi` are called. Missing ones must degrade to an empty list or a
+- `python3`, `git` and `pi` are called. Missing ones must degrade to an empty list or a
   toast, never to a broken panel.
 - The copy inside the mods is Chinese. There is no i18n layer, so an English UI means editing
   strings (README lists which file holds which).

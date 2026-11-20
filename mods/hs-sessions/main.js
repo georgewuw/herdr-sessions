@@ -1,17 +1,37 @@
 // @ts-nocheck  (plain-JS herdr mod: no type annotations by design; herdr-app check is the gate)
-// Session records for pi, Claude Code, and opencode in this folder (or every
-// folder): titled from each tool's own records, tagged by hand, resumed in a
-// new terminal with one click.
+// Session records for pi and Claude Code in this folder: titled from each
+// tool's own records, tagged by hand, resumed in a new terminal with one click.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { spaces, panes, focused, exec, theme, home, run, shared, setShared, notify } from "herdr";
+import { spaces, panes, focused, exec, theme, home, run, shared, setShared, notify, window } from "herdr";
 
 const TAGS = "hs.sessions.tags";
-const PI = "pi", CC = "cc", OC = "oc";
-const AGENTS = {
-  [PI]: { label: "pi", color: "ansi5", argv: () => [`${home()}/.npm-global/bin/pi`, "--session"] },
-  [CC]: { label: "cc", color: "ansi3", argv: () => ["claude", "--resume"] },
-  [OC]: { label: "oc", color: "ansi4", argv: () => [`${home()}/.npm-global/bin/opencode`] },
+const PI = "pi", CC = "cc";
+
+// Windows records folders as `C:\a\b` (Claude Code's project folders even as
+// `C--a-b`); macOS and Linux as `/a/b`. Sessions are compared in one spelling
+// and handed to the terminal in the spelling the agent recorded.
+const win = () => window()?.platform === "windows";
+const norm = (p) => String(p ?? "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+// Is `child` `root` or inside it? Case-insensitive on Windows, where C:\ and c:/ are one folder.
+function inside(child, root) {
+  const c = norm(child), r = norm(root);
+  return Boolean(c && r) && (c === r || c.startsWith(`${r}/`));
+}
+
+// How to start each agent: [program, leading args], before the session id.
+// On Windows `exec("pi")` gets ENOENT (the `pi` file is a POSIX sh shim with no
+// extension) and `exec("pi.cmd")` gets EINVAL, so `cmd /c pi` is the form that
+// works there; macOS and Linux start pi and claude directly.
+const LAUNCH = {
+  [PI]: { win: ["cmd", ["/c", "pi"]], posix: ["pi", []] },
+  [CC]: { win: ["cmd", ["/c", "claude"]], posix: ["claude", []] },
+};
+const launch = (agent) => (win() ? LAUNCH[agent].win : LAUNCH[agent].posix);
+// The small badge on each row: the tool's name and the theme color of it.
+const AGENT_LABEL = {
+  [PI]: { label: "pi", color: "ansi5" },
+  [CC]: { label: "cc", color: "ansi3" },
 };
 
 function location() {
@@ -42,6 +62,11 @@ function projectRoot() {
 // pi's own display name (set by renaming a session) wins over its first user
 // message, and pi's real session id lives in the file's first JSONL line — the
 // filename's `<timestamp>_<id>` prefix is not something `pi --session` accepts.
+//
+// pi 1.5 stores `sessions/--<path>--/<timestamp>_<id>.jsonl`; older builds used
+// `sessions/<folder>/<file>.jsonl`. Both are globbed, and
+// `subagent-artifacts/*_transcript.jsonl` (a sub-agent's log, not a session) is
+// left out. Claude Code stores `projects/<flattened-cwd>/<session>.jsonl`.
 const SCAN = String.raw`
 import json, glob, os
 def text_of(content):
@@ -92,7 +117,9 @@ def session_name(path):
 def row(agent, ident, cwd, path, title):
     return {"agent": agent, "id": ident, "file": os.path.basename(path), "cwd": cwd or "", "mtime": int(os.path.getmtime(path) * 1000), "title": " ".join((title or "").split())[:200]}
 out = []
-for path in glob.glob(os.path.expanduser("~/.pi/agent/sessions/*/*.jsonl")):
+for path in glob.glob(os.path.expanduser("~/.pi/agent/sessions/*/*.jsonl")) + glob.glob(os.path.expanduser("~/.pi/agent/sessions/*/*/*.jsonl")):
+    # A sub-agent's transcript is not a session pi can resume.
+    if os.sep + "subagent-artifacts" + os.sep in path: continue
     head = read_first(path)
     ident = head.get("id") or os.path.basename(path).rsplit("_", 1)[-1].replace(".jsonl", "")
     out.append(row("pi", ident, head.get("cwd") or first_cwd(path), path, session_name(path) or first_user(path)))
@@ -114,6 +141,7 @@ export default class Sessions extends View {
   init(_props, cx) {
     this.sessions = []; this.error = null; this.loading = false;
     this.scope = "current"; this.tagOnly = null; this.filter = ""; this.tagging = null;
+    this.python = null; // the first of python3/python that really runs
     this.input = InputState.new({ placeholder: "搜索标题/路径， #标签 只按标签过滤" });
     this.input.on("change", (_e, cx) => { this.filter = this.input.value(); cx.notify(); });
     this.refresh(cx);
@@ -133,6 +161,23 @@ export default class Sessions extends View {
     });
   }
 
+  // Windows ships a `python3` stub that prints nothing and exits 49, and Git
+  // Bash's `python` may be a Conda install; ask each once, keep the first that
+  // answers. Nothing found means the list stays empty, not an error every 30s.
+  async findPython() {
+    if (this.python !== null) return this.python;
+    for (const name of ["python3", "python"]) {
+      try {
+        const r = await exec(name, ["-c", "print(1)"], { timeout: 15000 });
+        if (r.code === 0 && r.stdout.trim() === "1") { this.python = name; return name; }
+      } catch { /* not installed */ }
+    }
+    this.python = "";
+    return "";
+  }
+
+  // Windows never reports "no shell" from `sh`, so claude's presence is
+  // asked of claude itself; on POSIX `command -v` is enough.
   refresh(cx) {
     if (this.loading) return;
     this.loading = true;
@@ -140,18 +185,15 @@ export default class Sessions extends View {
     const context = this.context;
     cx.spawn(async cx => {
       try {
-        const [scan, oc, claude] = await Promise.all([
-          exec("python3", ["-c", SCAN]).catch(() => null),
-          exec("sqlite3", ["-json", `${home()}/.local/share/opencode/opencode.db`, "select id, title, directory, time_updated/1000 as mtime from session where time_archived is null order by time_updated desc limit 300"]).catch(() => null),
-          exec("sh", ["-c", "command -v claude || true"]).catch(() => null),
+        const python = await this.findPython();
+        const [scan, claude] = await Promise.all([
+          python ? exec(python, ["-c", SCAN]).catch(() => null) : null,
+          exec(...(win() ? ["cmd", ["/c", "claude", "--version"]] : ["sh", ["-c", "command -v claude || true"]]), { timeout: 20000 }).catch(() => null),
         ]);
         if (this.context !== context) return;
-        this.claude = Boolean(claude?.code === 0 && claude.stdout?.trim());
+        this.claude = win() ? Boolean(claude && claude.code === 0) : Boolean(claude?.code === 0 && claude.stdout?.trim());
         let out = [];
         if (scan?.code === 0 && scan.stdout?.trim()) { try { out = JSON.parse(scan.stdout); } catch { out = []; } }
-        if (oc?.code === 0 && oc.stdout?.trim()) {
-          for (const s of JSON.parse(oc.stdout)) out.push({ agent: OC, id: s.id, cwd: s.directory, mtime: s.mtime * 1000, title: String(s.title ?? "") });
-        }
         this.sessions = out.filter(s => s.title || s.cwd).sort((a, b) => b.mtime - a.mtime).slice(0, 400);
         this.error = null;
       } catch (e) { if (this.context === context) this.error = String(e); }
@@ -184,7 +226,7 @@ export default class Sessions extends View {
     const wanted = [...raw.matchAll(/#([^\s#]+)/g)].map(m => m[1].toLowerCase());
     const q = raw.replace(/#[^\s#]+/g, " ").trim().toLowerCase();
     return this.sessions.filter(s => {
-      if (!(root && s.cwd && (s.cwd === root || s.cwd.startsWith(root + "/")))) return false;
+      if (!(root && s.cwd && inside(s.cwd, root))) return false;
       const own = this.tagsOf(s).map(x => String(x).toLowerCase());
       if (this.tagOnly && !own.includes(String(this.tagOnly).toLowerCase())) return false;
       if (wanted.some(tag => !own.some(x => x.includes(tag)))) return false;
@@ -193,14 +235,14 @@ export default class Sessions extends View {
     });
   }
 
-  // Opens the session where it was recorded; opencode's TUI picks the session
-  // itself, and Claude Code needs its CLI on the PATH.
+  // Opens the session in the folder it was recorded in; Claude Code needs its
+  // CLI on the PATH.
   resume(session) {
-    const agent = AGENTS[session.agent];
     if (session.agent === CC && !this.claude) { notify({ title: "claude 未安装", body: "找不到 claude 命令，无法 resume 这个会话", level: "warning" }); return; }
     const folder = session.cwd || location().cwd;
     if (!folder) { notify({ title: "会话没有记录目录", level: "warning" }); return; }
-    run("terminal.open", { argv: [...agent.argv(), ...(session.agent === OC ? [] : [session.id])], folder, place: "tab" });
+    const [program, args] = launch(session.agent);
+    run("terminal.open", { argv: [program, ...args, session.id], folder, place: "tab" });
   }
 
   tagInputFor(key) {
@@ -244,9 +286,9 @@ export default class Sessions extends View {
 
   // Three lines: the title, then time + folder, then this session's tags.
   row(session, i, t, short, root) {
-    const tags = this.tagsOf(session), agent = AGENTS[session.agent];
+    const tags = this.tagsOf(session), agent = AGENT_LABEL[session.agent];
     const tagging = this.tagging === this.keyOf(session);
-    const away = session.cwd && root && !session.cwd.startsWith(root);
+    const away = session.cwd && root && !inside(session.cwd, root);
     return div().id(`session-${i}`).flex().flex_col().flex_none().w_full().min_w(0).gap(3).px(8).py(6).rounded(7)
       .when(!tagging, el => el.cursor_pointer().hover(s => s.bg(t.hover)).on_click(() => this.resume(session)))
       .when(tagging, el => el.bg(t.selected))
@@ -274,9 +316,17 @@ export default class Sessions extends View {
   // shows which folder is being filtered instead.
   render(cx) {
     const t = theme(), h = home(), root = projectRoot();
-    const short = (p) => p && h && p.startsWith(h) ? "~" + p.slice(h.length) : p ?? "";
+    // `~` only for a real home prefix, compared the same way the filter does.
+    const short = (p) => {
+      if (!p) return "";
+      if (h && inside(p, h)) {
+        const rest = p.slice(h.length).replace(/^[\\/]+/, "");
+        return rest ? `~/${rest}` : "~";
+      }
+      return p;
+    };
     const list = this.visible(root);
-    const counts = { [PI]: 0, [CC]: 0, [OC]: 0 };
+    const counts = { [PI]: 0, [CC]: 0 };
     for (const s of list) counts[s.agent]++;
     return v_flex().id("sessions").size_full().min_h(0).rounded(10).overflow_hidden().bg(t.background).border_1().border_color(t.border).text_color(t.foreground).text_size(13)
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
@@ -290,7 +340,7 @@ export default class Sessions extends View {
             .on_click(() => { this.tagOnly = null; cx.notify(); }).child("✕")))))
       .child(h_flex().h(30).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(Input.new(this.input).flex_1().h_full().text_size(12).text_color(t.foreground))
-        .child(div().flex_none().text_size(10.5).text_color(t.dim).child(`pi ${counts[PI]} · cc ${counts[CC]} · oc ${counts[OC]}`)))
+        .child(div().flex_none().text_size(10.5).text_color(t.dim).child(`pi ${counts[PI]} · cc ${counts[CC]}`)))
       .child(v_flex().id("session-list").flex_1().min_h(0).p(6).gap(2).overflow_y_scroll()
         .children(list.map((s, i) => this.row(s, i, t, short, root))))
       .when(!list.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading sessions…" : !root ? "当前 space 没有目录" : this.filter.trim().startsWith("#") ? "没有匹配这个标签的会话（先用行右侧 + 给会话加标签）" : "当前项目没有会话"))));

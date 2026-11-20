@@ -3,7 +3,7 @@
 A [Herdr](https://herdr.dev) layout for people who drive coding agents all day.
 
 - Spaces & tabs on the left, terminal in the middle, one right-hand panel for **Files / Changes / Sessions / Favorites**
-- Resume any coding-agent session (pi / Claude Code / opencode) in one click, right in its original folder
+- Resume any coding-agent session (pi / Claude Code) in one click, right in its original folder
 - Review git diffs and commit without leaving the terminal — an **AI** button writes the commit message for you
 - Tag your sessions, filter with `#tag`, and pin favorite folders for one-click switching
 
@@ -12,7 +12,7 @@ A [Herdr](https://herdr.dev) layout for people who drive coding agents all day.
 一个给 [Herdr](https://herdr.dev) 用的布局，给整天开着编程 agent 干活的人：
 
 - 左边空间和标签，中间终端，右边一个面板装 **文件 / 改动 / 会话 / 收藏** 四件事
-- 会话一条一点就恢复（pi / Claude Code / opencode 都收），就在它原来的目录里
+- 会话一条一点就恢复（pi / Claude Code 都收），就在它原来的目录里
 - 不切窗口看 diff、填提交信息直接提交 —— 还有 **AI** 按钮帮你写提交信息
 - 会话可以打标签，搜 `#标签` 一秒过滤；常用目录加收藏，一点就切过去
 
@@ -36,7 +36,7 @@ A [Herdr](https://herdr.dev) layout for people who drive coding agents all day.
   ⭐ 收藏这个目录、`>_` 把路径 cd 进当前终端、复制按钮把绝对路径写进剪贴板。
 - **Changes** — 当前项目的 git 改动，逐个文件看 diff，填提交信息，点 **Commit** 提交。
   输入框旁有个 **AI** 按钮：用 `pi -p` 读最近的提交风格和这次 diff，生成一句中文提交信息填进输入框（只支持本地仓库）。
-- **Sessions** — 会话记录。**只列当前 space 所在项目的会话**，pi / Claude Code / opencode 三种都收，
+- **Sessions** — 会话记录。**只列当前 space 所在项目的会话**，pi / Claude Code 两种都收，
   点一条就在它原来的目录里恢复那个会话。每条两行再加一行标签：标题、时间和路径、标签。
   搜索框里写 `#标签` 就只按标签过滤，`#数据 #对账` 要求两个标签都有，`#数据 跑` 是标签加关键词。
   行右侧的 `+` 加标签（逗号分隔），保存后显示成标签块，点标签块上的 ✕ 删掉。
@@ -59,14 +59,13 @@ bash /tmp/herdr-sessions/install.sh
 
 ### 依赖
 
-`install.sh` 会检查并告诉你缺哪个，缺了只影响对应的功能：
+缺了只影响对应的功能：
 
 | 程序 | 用来做什么 | 没有会怎样 |
 | --- | --- | --- |
-| `python3` | 扫会话文件 | Sessions 列表空着 |
+| `python3`（或 `python`） | 扫会话文件 | Sessions 列表空着 |
 | `git` | Files / Changes / Spaces 的状态和 diff | 改动面板和分支显示没内容 |
-| `sqlite3` | 读 opencode 的会话库 | 不列 opencode 会话 |
-| `pi` | 会话标题、点一条恢复会话 | 标题退回首条消息，不能恢复 |
+| `pi` | 会话标题、恢复 pi 会话、AI 提交信息 | 标题退回首条消息，不能恢复 pi 会话 |
 | `claude` | 恢复 Claude Code 会话 | 不列/不能恢复 cc 会话 |
 
 ### 关于语言
@@ -116,7 +115,7 @@ The four right-hand panels:
   **Commit**. The **AI** button next to the box asks `pi -p` for a one-line commit message in the
   style of your last commits and puts it in the box (local repositories only).
 - **Sessions** — session history. It lists **only the sessions of the current space's project**,
-  from pi, Claude Code and opencode, and clicking one resumes it in the folder it was recorded in.
+  from pi and Claude Code, and clicking one resumes it in the folder it was recorded in.
   Each row is title / time and path / tags. In the search box, `#tag` filters by tag only,
   `#data #recon` requires both, `#data run` is a tag plus keywords. `+` on a row adds tags
   (comma separated); click ✕ on a tag to drop it.
@@ -140,9 +139,9 @@ Or by hand: copy `layouts/sessions.json` to `~/.config/herdr-app/layouts/`, copy
 
 ### Requirements
 
-`install.sh` reports what is missing; a missing program only disables its own feature.
-`python3` scans sessions (without it the list stays empty), `git` gives the Changes panel something
-to show, `sqlite3` reads opencode's database, `pi` provides session titles and resume, and `claude`
+A missing program only disables its own feature.
+`python3` (or `python`) scans sessions (without it the list stays empty), `git` gives the Changes
+panel something to show, `pi` provides session titles and the AI commit message, and `claude`
 is needed to resume Claude Code sessions.
 
 ### Language

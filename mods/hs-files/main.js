@@ -6,6 +6,10 @@ import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, setting
 
 const FAV_KEY = "hs.favorites";
 
+// Windows' default shell here is PowerShell, whose quoting for `cd` differs
+// from POSIX's; the buttons send into whichever shell the terminal runs.
+const win = () => window()?.platform === "windows";
+
 function location() {
   const space = spaces().find(s => s.active), f = focused();
   const pane = f?.pane ? panes().find(p => p.pane === f.pane) : null;
@@ -19,10 +23,16 @@ const PER_FOLDER = 500, TOTAL = 5000;
 async function directory(path, on) {
   if (!on && window()?.platform === "windows") {
     // Windows PowerShell otherwise uses the console code page; exec decodes UTF-8.
-    // Reparse points keep directory attributes even when dangling; check their target.
-    const r = await exec("powershell", ["-NoProfile", "-Command", "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); & { param($p) @(Get-ChildItem -LiteralPath $p -Force -ErrorAction Stop | Where-Object Name -ne '.git' | Select-Object -First 501 | ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } }) | ConvertTo-Json -Compress } '" + path.replaceAll("'", "''") + "'"]);
+    // Reparse points keep directory attributes even when dangling; check their
+    // target. The folder goes in as a PowerShell single-quoted literal (an
+    // apostrophe is written twice), so spaces, parentheses and `'` are safe.
+    const literal = "'" + path.replaceAll("'", "''") + "'";
+    const script = "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "
+      + `Get-ChildItem -LiteralPath ${literal} -Force -ErrorAction Stop | Where-Object Name -ne '.git' | Select-Object -First 501 | ForEach-Object { @{ name=$_.Name; dir=($_.PSIsContainer -and (-not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or ($_.Target -and [IO.Directory]::Exists(([IO.Path]::Combine([IO.Path]::GetDirectoryName($_.FullName), $_.Target[0])))))) } } | ConvertTo-Json -Compress`;
+    const r = await exec("powershell", ["-NoProfile", "-Command", script]);
     if (r.code !== 0) throw new Error(r.stderr || "Cannot list this folder");
-    const result = JSON.parse(r.stdout || "[]");
+    // An empty folder prints nothing at all rather than `[]`.
+    const result = JSON.parse(r.stdout.trim() || "[]");
     return Array.isArray(result) ? result : [result];
   }
   const script = 'n=0; for p in "$1"/* "$1"/.[!.]* "$1"/..?*; do [ -e "$p" ] || [ -L "$p" ] || continue; name=${p##*/}; [ "$name" = .git ] && continue; if [ -d "$p" ]; then kind=d; else kind=f; fi; printf "%s\\0%s\\0" "$kind" "$name"; n=$((n+1)); [ "$n" -gt 500 ] && break; done; test -d "$1"';
@@ -123,7 +133,10 @@ export default class Files extends View {
       notify({ title: "Wrong machine", body: `That terminal is on ${machine ?? "this computer"}, the files on ${this.on ?? "this computer"}.`, level: "warning" });
       return;
     }
-    const full = `${this.root}/${path}`, quoted = "'" + full.replaceAll("'", "'\\''") + "'";
+    const full = `${this.root}/${path}`;
+    // Both shells take a single-quoted path, but escape an apostrophe differently:
+    // PowerShell doubles it, POSIX closes the quote and escapes it.
+    const quoted = `'${full.replaceAll("'", win() ? "''" : "'\\''")}'`;
     cx.spawn(async _cx => { await hc(["send", addr, `cd ${quoted}`]).catch(() => notify({ title: "cd failed", body: full, level: "error" })); });
   }
 
@@ -169,7 +182,7 @@ export default class Files extends View {
         const t = theme(), ext = path.includes(".") ? path.split(".").pop() : "txt";
         this.code = EditorState.new({ language: LANG[ext] ?? ext, readonly: true,
           value: text.length > 400000 ? text.slice(0, 400000) + "\n… (file truncated)" : text,
-          font_family: settings().font_family, font_size: 12,
+          font_family: settings().font ?? "JetBrains Mono", font_size: 12,
           syntax: { keyword: t.ansi5, string: t.ansi2, comment: t.dim, function: t.ansi4, type: t.ansi3, number: t.ansi1, constant: t.ansi6 } });
       } catch { if (this.file === path && this.current(context)) this.fileError = "Cannot preview this file (binary, too large, or unreadable)"; }
       finally { cx.notify(); }

@@ -1,7 +1,20 @@
 // @ts-nocheck  (plain-JS herdr mod: no type annotations by design; herdr-app check is the gate)
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, home } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, home, window } from "herdr";
+
+const win = () => window()?.platform === "windows";
+
+// pi for the AI button. macOS/npm put it in ~/.npm-global/bin; Windows installs
+// it at ~/.pi/agent/bin/pi, which is a POSIX sh shim `exec` cannot start and a
+// `.cmd` `exec` refuses, so it runs through `cmd /c`. Bare `pi` on PATH is the
+// fallback everywhere. `--no-session` keeps the call out of the project's
+// session list; the rest keeps it a bare one-shot with no extensions or MCP.
+const PI_PROMPT_ARGS = ["-p", "--no-session", "--no-extensions", "--no-skills", "--no-mcp", "--no-context-files"];
+const PI_MIN_ARGS = ["-p", "--no-session"];
+function piProgram() {
+  return win() ? ["cmd", ["/c", "pi"]] : ["pi", []];
+}
 
 function location() {
   const space = spaces().find((s) => s.active), f = focused();
@@ -190,11 +203,14 @@ export default class Changes extends View {
           `变更文件：\n${files}`,
           ...(body ? [`diff 摘录（可能截断）：\n${body}`] : ["（无文本 diff，如全是二进制或新文件，请依据文件名和路径推测）"]),
         ].join("\n\n");
-        // herdr.exec spawns directly without the shell's PATH; pi lives in
-        // ~/.npm-global/bin, so call it by its absolute path.
-        // --no-session: ephemeral, leaves no session record in the project;
-        // no extensions/skills/mcp/context files: a bare, fast one-shot call.
-        const r = await exec(`${home()}/.npm-global/bin/pi`, ["-p", "--no-session", "--no-extensions", "--no-skills", "--no-mcp", "--no-context-files", prompt], { cwd: root });
+        // herdr.exec spawns directly without the shell's PATH, so pi is started
+        // through its launcher (see piProgram). The full flag set is what a
+        // current pi takes; an older build that does not know one of them exits
+        // with a usage error, and the second, minimal call still answers.
+        const [program, lead] = piProgram();
+        const ask = (flags) => exec(program, [...lead, ...flags, prompt], { cwd: root, timeout: 120000 });
+        let r = await ask(PI_PROMPT_ARGS);
+        if (r.code !== 0 && !r.stdout.trim()) r = await ask(PI_MIN_ARGS);
         if (key() !== context) return;
         const message = r.stdout.trim().replace(/^["'`]+|["'`]+$/g, "").split("\n").filter(Boolean).pop() || "";
         if (!message) throw new Error((r.stderr || "").trim() || "模型没有返回内容");
@@ -232,7 +248,7 @@ export default class Changes extends View {
           .when(f.add > 0, (e) => e.child(div().text_size(11).text_color(t.ansi2).child(`+${f.add}`))).when(f.del > 0, (e) => e.child(div().text_size(11).text_color(t.ansi1).child(`−${f.del}`)));
       })).when(!this.files.length, (e) => e.child(div().p(8).text_color(t.dim).child(this.error || (this.loading ? "Loading changes…" : this.root ? "No uncommitted changes" : "No folder")))))
       .when(this.limited, el => el.child(div().px(12).py(4).text_size(11).text_color(t.dim).child("Showing the first 1,000 changed files")))
-      .child(div().flex_1().min_h(0).relative().font_family(settings().font_family ?? "JetBrains Mono").text_size(11)
+      .child(div().flex_1().min_h(0).relative().font_family(settings().font ?? "JetBrains Mono").text_size(11)
         .child(div().id("changes-diff-x").size_full().overflow_x_scrollbar()
           .child(div().w_full().min_w(this.diffWidth).h_full().child(v_virtual_list("changes-diff", this.rows.length, 20, (i) => String(i),
             (range) => this.rows.slice(range.start, range.end).map((row) => this.diffRow(row, t))).size_full())))
