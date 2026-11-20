@@ -3,9 +3,9 @@
 # install.sh moved aside (the newest backup that holds each item).
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
-. "$HERE/lib.sh"
+. "$SCRIPTS/lib.sh"
 
 [ -d "$APP_HOME" ] || { echo "error: $APP_HOME does not exist." >&2; exit 1; }
 

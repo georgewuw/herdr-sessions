@@ -1,6 +1,6 @@
 # Windows notes
 
-Herdr Sessions runs on Windows through **Git Bash** (`bash install.sh`); the mods themselves are
+Herdr Sessions runs on Windows through **Git Bash** (`bash setup.sh`); the mods themselves are
 the same on every OS and check `window().platform` where they differ.
 
 | | Windows | macOS / Linux |
@@ -15,4 +15,4 @@ Folder comparison lives in one place, `mods/*/paths.js`; the scan of pi and Clau
 `mods/hs-sessions/scan.py`. Both honour `PI_CODING_AGENT_DIR` and `CLAUDE_CONFIG_DIR` where relevant.
 
 If a mod folder is locked while installing ("could not move ... aside"), quit Herdr and run
-`install.sh` again.
+`setup.sh` again.

@@ -7,9 +7,10 @@
 # was backed up so uninstall.sh can put exactly that back.
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$SCRIPTS/.." && pwd)" # the repository root: layouts/ and mods/ live there
 # shellcheck source=lib.sh
-. "$HERE/lib.sh"
+. "$SCRIPTS/lib.sh"
 
 die() { echo "error: $*" >&2; exit 1; }
 

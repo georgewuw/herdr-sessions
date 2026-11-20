@@ -30,10 +30,11 @@ A [Herdr](https://herdr.dev) layout for people who drive coding agents all day.
 
 ```bash
 git clone https://github.com/<你的用户名>/herdr-sessions.git /tmp/herdr-sessions
-bash /tmp/herdr-sessions/install.sh
+bash /tmp/herdr-sessions/setup.sh
 ```
 
-脚本先对每个 mod 跑 `herdr-app check`，通过了才动你的目录；同名文件会移到
+运行后选 **1) Install**。也可以跳过菜单：`bash setup.sh install`。
+安装脚本先对每个 mod 跑 `herdr-app check`，通过了才动你的目录；同名文件会移到
 `~/.config/herdr-app/backups/<时间>/`（不放在 `mods/` 里，免得被当成 mod 加载），
 再把 `layouts/sessions.json` 和 3 个 mod 拷进 `~/.config/herdr-app`，最后切到 `sessions` 布局。装完点顶栏右侧按钮打开面板。
 
@@ -64,7 +65,8 @@ bash /tmp/herdr-sessions/install.sh
 ### 卸载
 
 ```bash
-bash uninstall.sh
+bash setup.sh        # 选 2) Uninstall
+bash setup.sh uninstall   # 或直接卸载，不显示菜单
 ```
 
 只删 `layouts/sessions.json` 和你装进来的 3 个 mod（带 `.herdr-sessions` 标记的才删，你自己放的同名目录不动），

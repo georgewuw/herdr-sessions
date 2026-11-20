@@ -74,7 +74,7 @@ Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
   only if the space has none (always using it made switching spaces look like a no-op). The bottom row
   calls `pickFolder()` with no prompt. Art: `folder.svg`, `star.svg`, `plus.svg`.
 - **paths.js** — one copy in each of hs-sessions and hs-favorites (a mod can only import from its own
-  folder; `install.sh` refuses to run if they differ). Every folder comparison goes through it: `pathKey`
+  folder; `scripts/install.sh` refuses to run if they differ). Every folder comparison goes through it: `pathKey`
   (forward slashes, no trailing slash, lowercase on Windows and macOS), `isInside`, `samePath`, `baseName`,
   `tildify`. Folders are stored and launched as the OS spelled them.
 
@@ -112,4 +112,4 @@ Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
 - The list/tree toggle works, and the choice survives a restart.
 - Favorites saves the space's project folder; a click switches to the space already on that folder, also
   when an agent runs there from a space whose own folder differs, instead of making a duplicate.
-- `uninstall.sh` removes the layout and the three mods and restores any install backup.
+- `bash setup.sh uninstall` (`scripts/uninstall.sh`) removes the layout and the three mods and restores any install backup.
