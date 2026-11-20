@@ -44,11 +44,12 @@ git clone https://github.com/<你的用户名>/herdr-sessions.git /tmp/herdr-ses
 bash /tmp/herdr-sessions/install.sh
 ```
 
-脚本会备份同名文件、把 `layouts/sessions.json` 和 4 个 mod 拷进 `~/.config/herdr-app`、
-逐个 `herdr-app check`，最后切到 `sessions` 布局。装完点顶栏右侧按钮打开面板。
+脚本先对每个 mod 跑 `herdr-app check`，通过了才动你的目录；同名文件会移到
+`~/.config/herdr-app/backups/<时间>/`（不放在 `mods/` 里，免得被当成 mod 加载），
+再把 `layouts/sessions.json` 和 3 个 mod 拷进 `~/.config/herdr-app`，最后切到 `sessions` 布局。装完点顶栏右侧按钮打开面板。
 
 手动安装也可以：把 `layouts/sessions.json` 拷到 `~/.config/herdr-app/layouts/`，
-把 `mods/hs-*` 四个目录拷到 `~/.config/herdr-app/mods/`，然后
+把 `mods/hs-*` 三个目录拷到 `~/.config/herdr-app/mods/`，然后
 `herdr-app do layout.switch --name sessions`。
 
 ### 依赖
@@ -57,8 +58,7 @@ bash /tmp/herdr-sessions/install.sh
 
 | 程序 | 用来做什么 | 没有会怎样 |
 | --- | --- | --- |
-| `python3`（或 `python`） | 扫会话文件 | Sessions 列表空着 |
-| `git` | Spaces 的分支显示 | 分支显示没内容 |
+| Python 3（`python3`、`python` 或 `py -3`） | 扫会话文件 | Sessions 列表显示错误提示 |
 | `pi` | 会话标题、恢复 pi 会话 | 标题退回首条消息，不能恢复 pi 会话 |
 | `claude` | 恢复 Claude Code 会话 | 不列/不能恢复 cc 会话 |
 
@@ -79,7 +79,8 @@ bash /tmp/herdr-sessions/install.sh
 bash uninstall.sh
 ```
 
-只删 `layouts/sessions.json` 和你装进来的 4 个 mod，安装时若有备份会还原。
+只删 `layouts/sessions.json` 和你装进来的 3 个 mod（带 `.herdr-sessions` 标记的才删，你自己放的同名目录不动），
+安装时备份过的原文件会还原。
 你收藏的目录和标签留在 `shared.json` 的 `hs.favorites`、`hs.sessions.tags` 里，想清就自己删。
 
 ---
@@ -116,17 +117,17 @@ git clone https://github.com/<you>/herdr-sessions.git /tmp/herdr-sessions
 bash /tmp/herdr-sessions/install.sh
 ```
 
-The script backs up anything it would replace, copies `layouts/sessions.json` and the four mods into
+The script backs up anything it would replace, copies `layouts/sessions.json` and the three mods into
 `~/.config/herdr-app`, runs `herdr-app check` on each, and switches to the layout.
 
-Or by hand: copy `layouts/sessions.json` to `~/.config/herdr-app/layouts/`, copy the four
+Or by hand: copy `layouts/sessions.json` to `~/.config/herdr-app/layouts/`, copy the three
 `mods/hs-*` folders to `~/.config/herdr-app/mods/`, then
 `herdr-app do layout.switch --name sessions`.
 
 ### Requirements
 
 A missing program only disables its own feature.
-`python3` (or `python`) scans sessions (without it the list stays empty), `git` provides the branch label in Spaces, `pi` provides session titles, and `claude`
+Python 3 (`python3`, `python` or `py -3`) scans sessions (without it the panel says so), `pi` provides session titles, and `claude`
 is needed to resume Claude Code sessions.
 
 ### Language
@@ -143,7 +144,7 @@ Save, then switch away from the layout and back (`layout.switch --name main`, th
 bash uninstall.sh
 ```
 
-It removes `layouts/sessions.json` and the four mods, restoring install-time backups if there were any.
+It removes `layouts/sessions.json` and the three mods, restoring install-time backups if there were any.
 Saved folders and tags stay in `shared.json` under `hs.favorites` and `hs.sessions.tags`.
 
 ---

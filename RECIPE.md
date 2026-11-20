@@ -31,7 +31,7 @@ rescan.
 
 `layouts/sessions.json` — a `row` of `sidebar` (268px, `background: chrome`, `resizable: false`,
 `min 44`, `max 480`) and `work` (column). Sidebar children: block `brand` → mod `workspace-chrome`
-(46px, `window_drag: true`); column `sidebar-lists` → blocks `spaces` → mod `hs-spaces` and `agents`
+(46px, `window_drag: true`); column `sidebar-lists` → blocks `spaces` → shipped mod `spaces` and `agents`
 → shipped mod `agents` (both `weight 1`, `min 90`); block `sidebar-footer` → `workspace-chrome` with
 `props: { footer: true }` (69px). Work children: block `tabs` → mod `hs-tabs` (42px,
 `window_drag: true`); row `work-body` (padding 8, gap 8) → block `main` (`tab: "active"`, a `pane`
@@ -50,27 +50,33 @@ are plain JS:
   is the stack's `active`, and `layout.hide`/`layout.show` the `panel` node. Panel buttons are gated
   on `enabled`, which is just `["sessions", "favorites"]`.
   Renaming a tab opens `new-menu` through `openOverlay`.
-- **hs-spaces** (`mods/hs-spaces/main.js`) — the sidebar space list: colour per space in
-  `shared("space.colors")`, rename/add/move via `run("space.rename"|"space.new"|"space.move"|
-  "space.select")`, a branch label from `exec("git", …)`, and menus through `openOverlay`.
-- **hs-sessions** (`mods/hs-sessions/main.js`) — one `python3 -c` pass over `~/.pi/agent/sessions/*/*.jsonl`
-  and `~/.claude/projects/*/*.jsonl`. For pi
+- **hs-sessions** (`mods/hs-sessions/main.js`, `scan.py`, `paths.js`) — `main.js` runs `scan.py <home()>` (Python from
+  `python3`, `python` or `py -3`, whichever answers) every 30s. The script reads `$PI_CODING_AGENT_DIR` or
+  `~/.pi/agent`, and `$CLAUDE_CONFIG_DIR` or `~/.claude`: `sessions/*/*.jsonl` (and one level deeper) and
+  `projects/*/*.jsonl`. A failed scan keeps the previous list and shows the error. The session's folder
+  is the `cwd` recorded inside the file, never decoded from the flattened folder name. For pi
   it takes `id` and `cwd` from the file's first line and the title from the **last**
   `{"type":"session_info","name":…}` entry, falling back to the first user message. Clicking a row
   runs `run("terminal.open", { argv, folder, place: "tab" })` with `pi --session <header id>`,
-  `claude --resume <file uuid>`. Tags live in `shared("hs.sessions.tags")` keyed
+  `claude --resume <file uuid>`; on Windows the argv is prefixed with `cmd /c` (npm launchers can't be
+  spawned directly). Remote spaces list nothing: records are read on this computer. Tags live in `shared("hs.sessions.tags")` keyed
   `pi:<file name>`, edited through an `InputState` per session, cached by key so re-renders never
   rebuild the input. `home()`, `theme()`, `notify()` throughout.
 - **hs-favorites** (`mods/hs-favorites/main.js`) — flat list from `shared("hs.favorites")`, entries
   `{ name, folder, machine }`. A click runs `run("space.select")` when a `spaces()` entry matches on
   folder+machine, else `run("space.new", { folder, machine })`. `收藏当前目录` uses the active space's
   own `folder` (falling back to the focused pane's cwd only when the space has none — falling back
-  always made switching spaces look like a no-op). `浏览文件夹收藏…` uses `pickFolder`. Art:
-  `mods/hs-favorites/folder.svg`, `mods/hs-spaces/star.svg`, `mods/workspace-chrome/plus.svg`.
+  always made switching spaces look like a no-op). `浏览文件夹收藏…` uses `pickFolder`. Art, all in the
+  mod's own folder: `folder.svg`, `star.svg`, `plus.svg`.
+- **paths.js** — one copy in each of hs-sessions and hs-favorites (a mod can only import from
+  its own folder; `install.sh` refuses to run if the copies differ). Every folder comparison goes
+  through it: `pathKey` (forward slashes, no trailing slash, lowercase on Windows and macOS), `isInside`,
+  `samePath`, `baseName`, `tildify`. Folders are stored and launched in the spelling the OS gave.
 
-Shipped mods it relies on: `workspace-chrome`, `workspace-status`, `agents`, `pane`, `tabs`,
-`spaces`, `new-menu`. Note the cross-mod art: hs-favorites reads `star.svg` out of
-`mods/hs-spaces/`, so that mod must be installed with it.
+Shipped mods it relies on: `workspace-chrome` (spinner, icons), `workspace-status`, `agents`, `pane`
+(close icon), `menu`, `new-menu`. The mods carry their own copies of everything else, including the
+Windows window-button icons in `hs-tabs`. Layout ids the mods look up by name: `sidebar`, `panel`,
+`panel-body`, and the stack children `sessions` and `favorites`; renaming one in `sessions.json` breaks them.
 
 ## Watch out
 
@@ -78,16 +84,15 @@ Shipped mods it relies on: `workspace-chrome`, `workspace-status`, `agents`, `pa
   the mod from its upstream, which would overwrite these changes.
 - The panel is `hidden: true` at first. People who do not find the two buttons think the layout is
   broken — the README says it twice.
-- `cx.timer.every` is required for two things the layout would otherwise get wrong: a 30s session
-  rescan, and a 500ms watcher over `spaces()`/`focused()` because **a panel is not re-rendered when
-  the person switches space or focuses another terminal**.
+- Mods render again by themselves when spaces, focus or terminals change, so none polls them. The only
+  timer is hs-sessions' 30s rescan.
 - Editing a mod's file does not reload the copy already on screen. Switch to another panel and back
   (`layout.select --stack panel-body --child sessions`, then back), or another layout and back.
   Selecting the same child twice is a no-op.
 - `shared.json` on disk is a snapshot of the app's memory; editing it changes nothing until a
   restart. Only `setShared` moves live state.
-- `python3`, `git` and `pi` are called. Missing ones must degrade to an empty list or a
-  toast, never to a broken panel.
+- Python, `git`, `pi` and `claude` are called. Missing ones must degrade to a message or a
+  toast, never to a broken panel. Nothing runs during `herdr-app check` (`checking()` guards `init`).
 - The copy inside the mods is Chinese. There is no i18n layer, so an English UI means editing
   strings (README lists which file holds which).
 - Sizes are pixels at the person's font size; `max_w`/`truncate` everywhere a path can be long.
