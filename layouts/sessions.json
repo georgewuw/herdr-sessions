@@ -124,20 +124,6 @@
                   "type": "stack",
                   "children": [
                     {
-                      "id": "files",
-                      "type": "block",
-                      "content": {
-                        "mod": "hs-files"
-                      }
-                    },
-                    {
-                      "id": "changes",
-                      "type": "block",
-                      "content": {
-                        "mod": "hs-changes"
-                      }
-                    },
-                    {
                       "id": "sessions",
                       "type": "block",
                       "content": {
@@ -152,7 +138,7 @@
                       }
                     }
                   ],
-                  "active": "files"
+                  "active": "sessions"
                 }
               ],
               "size": {

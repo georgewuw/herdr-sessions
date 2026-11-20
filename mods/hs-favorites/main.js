@@ -55,7 +55,7 @@ export default class Favorites extends View {
     return h_flex().id(`fav-${i}`).h(42).flex_none().px(8).gap(8).items_center().rounded(7).cursor_pointer().hover(s => s.bg(t.hover))
       .on_click(() => this.open(f))
       .child(div().size(22).flex_none().flex().items_center().justify_center().rounded(5).bg(t.raised)
-        .child(svg("mods/hs-files/folder.svg").size(13).flex_none().text_color(t.muted)))
+        .child(svg("mods/hs-favorites/folder.svg").size(13).flex_none().text_color(t.muted)))
       .child(div().flex().flex_col().flex_1().min_w(0).gap(1)
         .child(div().w_full().truncate().text_size(12.5).text_color(t.foreground).child(f.name))
         .child(div().w_full().truncate().text_size(10.5).text_color(t.dim).child(`${f.machine ?? "本机"} · ${short(f.folder)}`)))

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Herdr Sessions: install the layout and its six mods into the Herdr home.
+# Herdr Sessions: install the layout and its four mods into the Herdr home.
 # Works in macOS/Linux bash and Windows Git Bash.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 LAYOUT="sessions"
-MODS=(hs-tabs hs-spaces hs-files hs-changes hs-sessions hs-favorites)
+MODS=(hs-tabs hs-spaces hs-sessions hs-favorites)
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -37,5 +37,5 @@ if herdr-app do layout.switch --name "$LAYOUT" >/dev/null 2>&1; then
 else
   echo "Files installed. Open Herdr, then run: herdr-app do layout.switch --name $LAYOUT"
 fi
-echo "The right panel starts collapsed: use Files / Changes / Sessions / Favorites in the top bar."
+echo "The right panel starts collapsed: use Sessions / Favorites in the top bar."
 echo "Back to your own layout: herdr-app do layout.switch --name main"

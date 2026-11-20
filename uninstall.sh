@@ -4,7 +4,7 @@ set -euo pipefail
 
 APP_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 LAYOUT="sessions"
-MODS=(hs-tabs hs-spaces hs-files hs-changes hs-sessions hs-favorites)
+MODS=(hs-tabs hs-spaces hs-sessions hs-favorites)
 
 [ -d "$APP_HOME" ] || { echo "error: $APP_HOME does not exist." >&2; exit 1; }
 

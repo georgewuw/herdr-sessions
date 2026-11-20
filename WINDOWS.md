@@ -25,16 +25,12 @@ Status: **not installed**. Review the diff (`git diff`), then run `bash install.
   `~/.npm-global/bin/...` paths are gone (bare names on PATH instead).
 - opencode support was removed entirely (it was not wanted); `sqlite3` is no longer needed.
 
-**hs-changes**: AI button runs pi via `cmd /c pi` on Windows, retries with `-p --no-session` if the
-full flag set fails, 120s timeout. `settings().font_family` (not a real key) became `settings().font`.
-
-**hs-files**: PowerShell listing builds a quoted literal (and tolerates empty folders); `cd` uses
-PowerShell quoting on Windows and POSIX quoting elsewhere; same font fix.
+**hs-files / hs-changes**: removed (Files and Changes panels dropped).
 
 **hs-spaces**: `base()` and repo-name parsing split on `/` and `\`.
 
 **install.sh / uninstall.sh**: simplified and English only. install backs up what it replaces,
-copies the layout and six mods, runs `herdr-app check` on each, then switches layout. uninstall
+copies the layout and four mods, runs `herdr-app check` on each, then switches layout. uninstall
 removes them and restores the oldest backup of each.
 
 ## Not changed / unverified
