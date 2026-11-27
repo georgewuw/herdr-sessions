@@ -51,6 +51,9 @@ Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
   `enabled` list and two more `panelButton`s after Changes; everything else stays as shipped (including
   reading the window-button icons from `mods/tabs/`). A button runs `layout.select { stack: "panel-body",
   child }` and `layout.show` / `layout.hide` on `panel`. Files and Changes still follow `workspace.panels`.
+  Because it is a fork, it is kept as **upstream + a patch** (see *Keeping hs-tabs on Herdr's tabs*):
+  `vendor/herdr/tabs/` is the upstream copy it was forked from, `vendor/herdr/tabs/hs-tabs.patch` the
+  whole difference, and `mods/hs-tabs/main.js` the two combined.
 - **hs-sessions** — `main.js` runs `scan.py <home()>` every 30s through `exec` (the first of `python3`,
   `python`, `py -3` that prints `1`; a failed scan keeps the old list and shows the error) and filters,
   tags and launches.
@@ -82,6 +85,37 @@ Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
 `run`, `exec`, `home`, `appHome`, `notify`, `pickFolder`, `checking`. Beyond the layout it relies on Herdr's own
 `tabs`, `files` and `changes` mods and its `icons/`. Programs run: Python, `pi`, `claude`.
 
+## Keeping hs-tabs on Herdr's tabs
+
+Herdr updates its own mods on every release. A fork would silently sit on the old `tabs` forever, so the
+fork is stored as **upstream + one patch** and rebuilt, never hand-edited in place. Three files keep it:
+
+- `vendor/herdr/tabs/main.js` — Herdr's `tabs` mod byte for byte as it shipped. `SOURCE` beside it records
+  the app version and the date it was taken — no path, so it names nobody's machine.
+- `vendor/herdr/tabs/hs-tabs.patch` — the entire difference, four hunks: the `// @ts-nocheck` line,
+  `enabled` gaining `sessions` / `favorites`, the label becoming a tooltip while the button is off, and
+  the two `panelButton`s.
+- `mods/hs-tabs/main.js` — the snapshot with that patch applied. It is generated: an edit made only
+  there is not part of the fork until it is in the patch as well.
+
+`scripts/tabs-sync.sh` has two commands:
+
+```bash
+bash scripts/tabs-sync.sh        # snapshot, installed upstream and hs-tabs: where they differ (exit 1 on drift)
+bash scripts/tabs-sync.sh pull   # copy the installed tabs mod into vendor/ and record the version
+```
+
+After a Herdr release: `pull`. It prints whether the patch still applies. If it does, hs-tabs is
+rebuilt from the new snapshot and the patch, deltas carried over. If a hunk no longer applies, `pull`
+prints the deltas to port onto `vendor/herdr/tabs/main.js` — that copy is the new baseline — and hs-tabs
+is rebuilt from there. Either way `herdr-app check mods/hs-tabs` is the gate, and `status` exits non-zero
+while anything is out of step, so it can gate a release.
+
+The snapshot is stored with LF endings and `pull` strips CR, because Herdr writes the platform's endings
+and a Windows checkout of the snapshot would otherwise differ from a macOS one line for line.
+`.gitattributes` pins that. The window-button icons `hs-tabs` reads stay Herdr's own at `mods/tabs/`:
+not vendored, not patched.
+
 ## Watch out
 
 - `cloned_from` is stripped from the layout and every `mod.json`. Left in, Herdr offers to update the mod
@@ -89,8 +123,9 @@ Three mods, each `"place": "none"` with `// @ts-nocheck` on line 1:
 - The panel starts hidden. People who miss the tab-bar buttons think the layout is broken.
 - `hs-tabs` finds the layout nodes `sidebar`, `panel` and `panel-body` by id, and the panel buttons by the stack
   children `sessions` and `favorites`; keep those ids, they are the default's.
-- When Herdr changes `main.json` or its `tabs` mod, re-apply the three layout changes and the `hs-tabs`
-  additions to the new versions rather than editing this file; none of those details are repeated here.
+- When Herdr changes `main.json`, re-apply the three layout changes to the new version rather than
+  editing this file; none of those details are repeated here. When it changes its `tabs` mod, take the
+  update through `scripts/tabs-sync.sh` (above) instead of copying it over `hs-tabs`.
 - Editing a mod's file does not reload the copy on screen. Select another panel and back
   (`layout.select --stack panel-body --child sessions`), or switch layouts and back.
 - `shared.json` on disk is a snapshot; editing it changes nothing until a restart. Only `setShared`

@@ -1,3 +1,9 @@
 # Shell scripts and the scanner must keep LF, or bash and python choke on a Windows checkout.
 *.sh text eol=lf
 *.py text eol=lf
+
+# The upstream tabs snapshot is compared and patched line for line: one ending everywhere, so the same
+# patch applies on Windows and on macOS/Linux. scripts/tabs-sync.sh writes LF.
+vendor/** text eol=lf
+mods/hs-tabs/main.js text eol=lf
+mods/hs-tabs/*.patch text eol=lf
